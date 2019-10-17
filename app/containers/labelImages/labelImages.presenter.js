@@ -41,6 +41,37 @@ class Presenter {
       }
     );
   };
+  get savedFilePath() {
+    return Path.join(this.savingPath, this.fileSavingName + this.fileSaingExt);
+  }
+  loadSavedFile = async () => {
+    try {
+      if (!this.activePath)
+        return message.error('Please choose a folder first');
+      const exist = await fs.exists(this.savedFilePath);
+      if (!exist) return message.error('Saved file not found');
+      let data = await fs.readFile(this.savedFilePath, 'utf8');
+      if (!data) return message.error('No data in file');
+      data = JSON.parse(data);
+      this.labeledImages = data;
+      const allLabels = new Set();
+      for (let i = 0; i < data.length; i++) {
+        const { labels } = data[i];
+        labels.split(this.delimiter).forEach(o => allLabels.add(o));
+      }
+      const { setStore } = this.getStore();
+      const lastImage = data[data.length - 1];
+      const currentIndex =
+        this.imageNames.findIndex(o => o === lastImage.filename) + 1;
+      setStore({
+        currentIndex,
+        options: [...allLabels]
+      });
+    } catch (err) {
+      console.error(err);
+      message.error('load saved file');
+    }
+  };
   loadImagesFromPath = async path => {
     try {
       const hide = message.loading('Reading files');
@@ -154,6 +185,7 @@ class Presenter {
   retrieveLastImage = async () => {
     const { store, setStore } = this.getStore();
     const { selectedOptions, currentIndex } = store;
+    const hide = message.loading();
     try {
       const savingPath = Path.join(
         this.savingPath,
@@ -185,12 +217,14 @@ class Presenter {
           }`
         );
         console.error(savedLastFilename, last.filename);
+      } else {
         this.labeledImages.pop();
         setStore({
           currentIndex: currentIndex - 1,
           selectedOptions: last.labels.split(this.delimiter)
         });
         await this.writeFile();
+        hide();
       }
     } catch (err) {
       console.warn('retrieveLastImage', err);
@@ -201,7 +235,7 @@ class Presenter {
   lastImage = async ({ uri, extname, filename }) => {
     const { store, setStore } = this.getStore();
     const { selectedOptions, currentIndex } = store;
-    if (currentIndex === 0) return;
+    if (currentIndex === 0) return message.error('No last image');
     await this.retrieveLastImage();
   };
 

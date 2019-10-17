@@ -45,6 +45,12 @@ class LabelImages extends React.Component {
           <Button onClick={this.presenter.selectFolder}>
             {'select folder'}
           </Button>
+          <Button
+            onClick={this.presenter.loadSavedFile}
+            style={{ marginLeft: 20 }}
+          >
+            {'restore form local'}
+          </Button>
           <div style={{ marginLeft: 20 }}>
             <h4>{'Active Dir: ' + activeDir}</h4>
             <h4>{'Image Count: ' + imageCount}</h4>

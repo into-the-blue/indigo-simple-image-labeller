@@ -17,18 +17,22 @@ class ImageBrowser extends React.Component {
     Mousetrap.bind('down', () => nextImage(image));
   };
   render() {
-    const { image } = this.props;
+    const { image, lastImage, skipOne, nextImage } = this.props;
     const { uri, extname, filename } = image;
     return (
       <div>
-        <img src={uri} style={{ width: '100%' }} alt={'img'} />
+        <img
+          src={uri}
+          style={{ width: '100%', objectFit: 'contain' }}
+          alt={'img'}
+        />
         <div
           className={styles.rowCenter}
           style={{ justifyContent: 'space-between', width: '100%' }}
         >
-          <Button>{'⬅️ or ⬆️ Last'}</Button>
-          <Button>{'Skip space+space'}</Button>
-          <Button>{'Next ⬇️ or ➡️'}</Button>
+          <Button onClick={() => lastImage(image)}>{'⬅️ or ⬆️ Last'}</Button>
+          <Button onClick={() => skipOne(image)}>{'Skip space+space'}</Button>
+          <Button onClick={() => nextImage(image)}>{'Next ⬇️ or ➡️'}</Button>
         </div>
       </div>
     );
