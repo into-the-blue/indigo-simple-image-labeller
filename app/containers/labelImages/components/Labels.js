@@ -1,5 +1,5 @@
 import React from 'react';
-import { SelectableItem } from './index';
+import { SelectableItem } from './SelectableItem';
 import { Col, Input } from 'antd';
 class Labels extends React.Component {
   constructor(props) {

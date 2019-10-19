@@ -60,7 +60,7 @@
     "eqeqeq": "off",
     "jsx-a11y/alt-text": "warn",
     "react/sort-comp": [
-      "error",
+      "off",
       {
         "order": [
           "type-annotations",

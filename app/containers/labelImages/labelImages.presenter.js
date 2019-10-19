@@ -3,6 +3,7 @@ import { message } from 'antd';
 import fs from 'fs-extra';
 import Mousetrap from 'mousetrap';
 import Path from 'path';
+import Moment from 'moment';
 const IMAGE_EXT = /\.(bmp|jpg|jpeg|png|tif|gif|pcx|tga|exif|fpx|svg|psd|cdr|pcd|dxf|ufo|eps|ai|raw|wmf|webp)+$/;
 function verifyImages(filenames) {
   const arr = [];
@@ -14,10 +15,10 @@ function verifyImages(filenames) {
   return arr;
 }
 class Presenter {
-  imageNames = [];
+  fileNames = [];
   activePath;
   savingPath;
-  fileSavingName = 'labeled';
+  fileSavingName = 'labeled-' + Moment().format('YYYY-MM-DD');
   fileSaingExt = '.json';
   delimiter = ';';
   labeledImages = [];
@@ -35,6 +36,7 @@ class Presenter {
       },
       filePaths => {
         // console.log(filePaths);
+        if (!filePaths) return;
         if (filePaths[0]) {
           this.loadImagesFromPath(filePaths[0]);
         }
@@ -62,7 +64,7 @@ class Presenter {
       const { setStore } = this.getStore();
       const lastImage = data[data.length - 1];
       const currentIndex =
-        this.imageNames.findIndex(o => o === lastImage.filename) + 1;
+        this.fileNames.findIndex(o => o === lastImage.filename) + 1;
       setStore({
         currentIndex,
         options: [...allLabels]
@@ -78,7 +80,7 @@ class Presenter {
       this.activePath = path;
       this.savingPath = Path.join(path, '../');
       const filenames = await fs.readdir(path);
-      this.imageNames = verifyImages(filenames);
+      this.fileNames = verifyImages(filenames);
       this.getStore().setStore({
         imageCount: filenames.length,
         activeDir: path
@@ -86,7 +88,7 @@ class Presenter {
       hide();
       message.success(
         `Files loaded, Total ${filenames.length}, Invalid ${filenames.length -
-          this.imageNames.length}`
+          this.fileNames.length}`
       );
     } catch (err) {
       message.error('Failed to open directory');
@@ -145,9 +147,10 @@ class Presenter {
       Mousetrap.unbind(key);
     }
   };
-  getCurrentImage = index => {
-    if (!this.imageNames.length) return null;
-    const filename = this.imageNames[index];
+  getCurrentImage = () => {
+    const { currentIndex } = this.getStore().store;
+    if (!this.fileNames.length) return null;
+    const filename = this.fileNames[currentIndex];
     return {
       uri: Path.join(this.activePath, filename),
       filename,
@@ -160,6 +163,7 @@ class Presenter {
       filename,
       labels: labels.join(this.delimiter)
     };
+    console.log(filename, labels);
     this.labeledImages.push(doc);
     await this.writeFile();
   };
@@ -206,7 +210,7 @@ class Presenter {
       if (!last) {
         return message.error('Last element not exists');
       }
-      // const expectedLastFilename = this.imageNames[currentIndex - 1];
+      // const expectedLastFilename = this.fileNames[currentIndex - 1];
       const savedLastFilename = this.labeledImages[
         this.labeledImages.length - 1
       ].filename;
@@ -232,17 +236,19 @@ class Presenter {
     }
   };
 
-  lastImage = async ({ uri, extname, filename }) => {
+  lastImage = async () => {
+    const { uri, extname, filename } = this.getCurrentImage();
     const { store, setStore } = this.getStore();
     const { selectedOptions, currentIndex } = store;
     if (currentIndex === 0) return message.error('No last image');
     await this.retrieveLastImage();
   };
 
-  skipOne = ({ uri, extname, filename }) => {
+  skipOne = () => {
+    const { uri, extname, filename } = this.getCurrentImage();
     const { store, setStore } = this.getStore();
     const { selectedOptions, currentIndex } = store;
-    if (currentIndex < this.imageNames.length - 1) {
+    if (currentIndex < this.fileNames.length - 1) {
       setStore({
         currentIndex: currentIndex + 1
       });
@@ -251,11 +257,12 @@ class Presenter {
     }
   };
 
-  nextImage = async ({ uri, extname, filename }) => {
+  nextImage = async () => {
+    const { uri, extname, filename } = this.getCurrentImage();
     const { store, setStore } = this.getStore();
     const { selectedOptions, currentIndex } = store;
     if (!selectedOptions.length) return message.error('Please select label !');
-    if (currentIndex < this.imageNames.length - 1) {
+    if (currentIndex < this.fileNames.length - 1) {
       await this.saveImageAndLabel(filename, selectedOptions);
       setStore({
         currentIndex: currentIndex + 1,

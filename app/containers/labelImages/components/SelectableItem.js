@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Checkbox, Row, Icon, Input, Button, Tag } from 'antd';
 import styles from '../labelImages.css';
-class Option extends React.PureComponent {
+class Option extends React.Component {
   constructor(props) {
     super(props);
     this.state = {

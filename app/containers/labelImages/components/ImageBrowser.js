@@ -8,19 +8,22 @@ class ImageBrowser extends React.Component {
   }
   _initKeyboardListener = () => {
     const { lastImage, skipOne, nextImage, image } = this.props;
-    Mousetrap.bind('left', () => lastImage(image));
-    Mousetrap.bind('up', () => lastImage(image));
+    Mousetrap.bind('left', lastImage);
+    Mousetrap.bind('up', lastImage);
 
-    Mousetrap.bind('space space', () => skipOne(image));
+    Mousetrap.bind('space space', skipOne);
 
-    Mousetrap.bind('right', () => nextImage(image));
-    Mousetrap.bind('down', () => nextImage(image));
+    Mousetrap.bind('right', nextImage);
+    Mousetrap.bind('down', nextImage);
   };
   render() {
     const { image, lastImage, skipOne, nextImage } = this.props;
     const { uri, extname, filename } = image;
     return (
       <div>
+        <div className={styles.rowCenter}>
+          <h3>{'filename: ' + filename}</h3>
+        </div>
         <img
           src={uri}
           style={{ width: '100%', objectFit: 'contain' }}
