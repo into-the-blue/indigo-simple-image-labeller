@@ -18,12 +18,13 @@ class Presenter {
   fileNames = [];
   activePath;
   savingPath;
-  fileSavingName = 'labeled-' + Moment().format('YYYY-MM-DD');
+  fileSavingName = 'labeled-' + Moment().format('YYYY-MM-DD-HH:MM:SS');
   fileSaingExt = '.json';
   delimiter = ';';
   labeledImages = [];
-  constructor(getStore) {
+  constructor(getStore, viewModel) {
     this.getStore = getStore;
+    this.viewModel = viewModel;
   }
   componentDidMount() {}
 
@@ -50,25 +51,38 @@ class Presenter {
     try {
       if (!this.activePath)
         return message.error('Please choose a folder first');
-      const exist = await fs.exists(this.savedFilePath);
-      if (!exist) return message.error('Saved file not found');
-      let data = await fs.readFile(this.savedFilePath, 'utf8');
-      if (!data) return message.error('No data in file');
-      data = JSON.parse(data);
-      this.labeledImages = data;
-      const allLabels = new Set();
-      for (let i = 0; i < data.length; i++) {
-        const { labels } = data[i];
-        labels.split(this.delimiter).forEach(o => allLabels.add(o));
-      }
-      const { setStore } = this.getStore();
-      const lastImage = data[data.length - 1];
-      const currentIndex =
-        this.fileNames.findIndex(o => o === lastImage.filename) + 1;
-      setStore({
-        currentIndex,
-        options: [...allLabels]
-      });
+      const win = remote.getCurrentWindow();
+      remote.dialog.showOpenDialog(
+        win,
+        {
+          properties: ['openFile']
+        },
+        async filePaths => {
+          if (!filePaths) return;
+          if (filePaths[0]) {
+            if (!/\.json$/.test(filePaths[0])) {
+              return message.error('Only JSON files are supported');
+            }
+            let data = await fs.readFile(filePaths[0], 'utf8');
+            if (!data) return message.error('No data in file');
+            data = JSON.parse(data);
+            this.labeledImages = data;
+            const allLabels = new Set();
+            for (let i = 0; i < data.length; i++) {
+              const { labels } = data[i];
+              labels.split(this.delimiter).forEach(o => allLabels.add(o));
+            }
+            const { setStore } = this.getStore();
+            const lastImage = data[data.length - 1];
+            const currentIndex =
+              this.fileNames.findIndex(o => o === lastImage.filename) + 1;
+            setStore({
+              currentIndex,
+              options: [...allLabels]
+            });
+          }
+        }
+      );
     } catch (err) {
       console.error(err);
       message.error('load saved file');
@@ -95,58 +109,6 @@ class Presenter {
     }
   };
 
-  onChangeOption = selected => {
-    this.getStore().setStore({
-      selectedOptions: selected
-    });
-  };
-  _selectOption = value => {
-    const { store, setStore } = this.getStore();
-    const { selectedOptions } = store;
-    if (selectedOptions.includes(value)) {
-      setStore({
-        selectedOptions: selectedOptions.filter(o => o !== value)
-      });
-    } else {
-      setStore({
-        selectedOptions: selectedOptions.concat(value)
-      });
-    }
-  };
-  onPressAdd = tag => {
-    const { store, setStore } = this.getStore();
-    const { options } = store;
-    if (options.includes(tag)) return;
-    setStore({
-      options: options.concat(tag)
-    });
-  };
-
-  /**
-   *
-   *
-   * @memberof Presenter
-   * updated :{
-   * kv:{
-   * key,
-   * value
-   * }
-   * operation:'add' | 'delete'
-   * }
-   */
-  onChangeBoundKey = (boundKeys, updated) => {
-    const { store, setStore } = this.getStore();
-    setStore({ boundKeys });
-    const {
-      kv: { key, value },
-      operation
-    } = updated;
-    if (operation === 'add') {
-      Mousetrap.bind(key, () => this._selectOption(value));
-    } else {
-      Mousetrap.unbind(key);
-    }
-  };
   getCurrentImage = () => {
     const { currentIndex } = this.getStore().store;
     if (!this.fileNames.length) return null;
@@ -188,7 +150,7 @@ class Presenter {
 
   retrieveLastImage = async () => {
     const { store, setStore } = this.getStore();
-    const { selectedOptions, currentIndex } = store;
+    const { currentIndex } = store;
     const hide = message.loading();
     try {
       const savingPath = Path.join(
@@ -224,9 +186,9 @@ class Presenter {
       } else {
         this.labeledImages.pop();
         setStore({
-          currentIndex: currentIndex - 1,
-          selectedOptions: last.labels.split(this.delimiter)
+          currentIndex: currentIndex - 1
         });
+        this.viewModel.setSelectedLabels(last.labels.split(this.delimiter));
         await this.writeFile();
         hide();
       }
@@ -239,7 +201,7 @@ class Presenter {
   lastImage = async () => {
     const { uri, extname, filename } = this.getCurrentImage();
     const { store, setStore } = this.getStore();
-    const { selectedOptions, currentIndex } = store;
+    const { currentIndex } = store;
     if (currentIndex === 0) return message.error('No last image');
     await this.retrieveLastImage();
   };
@@ -247,7 +209,7 @@ class Presenter {
   skipOne = () => {
     const { uri, extname, filename } = this.getCurrentImage();
     const { store, setStore } = this.getStore();
-    const { selectedOptions, currentIndex } = store;
+    const { currentIndex } = store;
     if (currentIndex < this.fileNames.length - 1) {
       setStore({
         currentIndex: currentIndex + 1
@@ -257,17 +219,30 @@ class Presenter {
     }
   };
 
+  get selectedLabels() {
+    return this.viewModel.getSelectedLabels;
+  }
+  resetSelectedLabels = () => this.viewModel.resetSelectedLabels();
   nextImage = async () => {
     const { uri, extname, filename } = this.getCurrentImage();
     const { store, setStore } = this.getStore();
-    const { selectedOptions, currentIndex } = store;
-    if (!selectedOptions.length) return message.error('Please select label !');
-    if (currentIndex < this.fileNames.length - 1) {
-      await this.saveImageAndLabel(filename, selectedOptions);
-      setStore({
-        currentIndex: currentIndex + 1,
-        selectedOptions: []
+    const { currentIndex, modalVisible } = store;
+    if (!this.selectedLabels.length)
+      return message.error('Please select label !');
+    if (!modalVisible) {
+      return setStore({
+        modalVisible: true
       });
+    }
+    setStore({
+      modalVisible: false
+    });
+    if (currentIndex < this.fileNames.length - 1) {
+      await this.saveImageAndLabel(filename, this.selectedLabels);
+      setStore({
+        currentIndex: currentIndex + 1
+      });
+      this.resetSelectedLabels();
     } else {
       message.error('This is the last image !');
     }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Checkbox, Row, Icon, Input, Button, Tag } from 'antd';
 import styles from '../labelImages.css';
+import { InputLabel } from './index';
 class Option extends React.Component {
   constructor(props) {
     super(props);
@@ -22,7 +23,7 @@ class Option extends React.Component {
       bindKey,
       value,
       onPressOption,
-      label,
+      annotation,
       boundKeys
     } = this.props;
     const { key } = this.state;
@@ -34,8 +35,9 @@ class Option extends React.Component {
           type={isSelected ? 'primary' : 'default'}
           style={{ width: 70 }}
         >
-          {label}
+          {value}
         </Button>
+        <h4>{annotation}</h4>
         <Input
           value={key}
           onChange={e => this.setState({ key: e.target.value.trim() })}
@@ -60,14 +62,6 @@ class Option extends React.Component {
   }
 }
 export class SelectableItem extends React.Component {
-  onPressOption = (value, isSelected) => {
-    const { onChangeOption, selectedValues } = this.props;
-    if (isSelected) {
-      onChangeOption(selectedValues.filter(o => o !== value));
-    } else {
-      onChangeOption(selectedValues.concat(value));
-    }
-  };
   onChangeBind = (kv, isBound) => {
     const { boundKeys, onChangeBoundKey } = this.props;
     if (isBound) {
@@ -80,21 +74,31 @@ export class SelectableItem extends React.Component {
     }
   };
   render() {
-    const { options, selectedValues, boundKeys } = this.props;
+    const {
+      labelObj,
+      selectedValues,
+      boundKeys,
+      idx,
+      onPressAdd,
+      onPressOption
+    } = this.props;
+    const { options, type } = labelObj;
     return (
       <div>
-        {options.map(({ value, label }, index) => (
+        <h3>{type}</h3>
+        {options.map(({ value, annotation }, index) => (
           <Option
             key={'opt' + index}
             isSelected={selectedValues.includes(value)}
-            label={label}
+            annotation={annotation}
             value={value}
             boundKeys={boundKeys}
             bindKey={kv => this.onChangeBind(kv, false)}
             unbindKey={kv => this.onChangeBind(kv, true)}
-            onPressOption={this.onPressOption}
+            onPressOption={onPressOption}
           />
         ))}
+        <InputLabel onPressAdd={onPressAdd} />
       </div>
     );
   }
