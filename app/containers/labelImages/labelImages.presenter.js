@@ -141,17 +141,13 @@ class Presenter {
 
   writeFile = async () => {
     if (!this.labeledImages.length) return;
-    const savingPath = Path.join(
-      this.savingPath,
-      this.fileSavingName + this.fileSaingExt
-    );
     try {
-      const exist = await fs.exists(savingPath);
+      const exist = await fs.exists(this.savedFilePath);
       if (exist) {
       } else {
       }
       await fs.writeFile(
-        savingPath,
+        this.savedFilePath,
         JSON.stringify(this.labeledImages),
         'utf8'
       );
@@ -166,14 +162,10 @@ class Presenter {
     const { currentIndex } = store;
     const hide = message.loading();
     try {
-      const savingPath = Path.join(
-        this.savingPath,
-        this.fileSavingName + this.fileSaingExt
-      );
-      if (!(await fs.exists(savingPath))) {
+      if (!(await fs.exists(this.savedFilePath))) {
         return message.error('File not exists!');
       }
-      let data = await fs.readFile(savingPath, 'utf8');
+      let data = await fs.readFile(this.savedFilePath, 'utf8');
       if (!data) {
         return message.error('No data found in the file');
       }
@@ -198,6 +190,7 @@ class Presenter {
         console.error(savedLastFilename, last.filename);
       } else {
         this.labeledImages.pop();
+        // todo last image display skiped one
         setStore({
           currentIndex: currentIndex - 1
         });
