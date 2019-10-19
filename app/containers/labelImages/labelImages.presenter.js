@@ -20,8 +20,8 @@ class Presenter {
   activePath;
   savingPath;
   fileSavingName = 'labeled-' + this.startTime;
-  skipedFileSavingName = 'skiped-' + this.startTime;
-  skipedImages = [];
+  skippedFileSavingName = 'skipped-' + this.startTime;
+  skippedImages = [];
   fileSaingExt = '.json';
   delimiter = ';';
   labeledImages = [];
@@ -50,10 +50,10 @@ class Presenter {
   get savedFilePath() {
     return Path.join(this.savingPath, this.fileSavingName + this.fileSaingExt);
   }
-  get skipedFilePath() {
+  get skippedFilePath() {
     return Path.join(
       this.savingPath,
-      this.skipedFileSavingName + this.fileSaingExt
+      this.skippedFileSavingName + this.fileSaingExt
     );
   }
   loadSavedFile = async () => {
@@ -190,7 +190,7 @@ class Presenter {
         console.error(savedLastFilename, last.filename);
       } else {
         this.labeledImages.pop();
-        // todo last image display skiped one
+        // todo last image display skipped one
         setStore({
           currentIndex: currentIndex - 1
         });
@@ -220,16 +220,19 @@ class Presenter {
       setStore({
         currentIndex: currentIndex + 1
       });
-      this.skipedImages.push(filename);
-      await fs
-        .writeFile(
-          this.skipedFilePath,
-          JSON.stringify(this.skipedImages),
-          'utf8'
-        )
-        .catch(err => {
-          message.error('Failed to save skiped filenames');
-        });
+      message.info('Skipped');
+      if (!this.skippedImages.includes(filename)) {
+        this.skippedImages.push(filename);
+        await fs
+          .writeFile(
+            this.skippedFilePath,
+            JSON.stringify(this.skippedImages),
+            'utf8'
+          )
+          .catch(err => {
+            message.error('Failed to save skipped filenames');
+          });
+      }
     } else {
       message.error('This is the last image !');
     }
