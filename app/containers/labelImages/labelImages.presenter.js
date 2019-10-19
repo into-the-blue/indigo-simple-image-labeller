@@ -16,9 +16,12 @@ function verifyImages(filenames) {
 }
 class Presenter {
   fileNames = [];
+  startTime = Moment().format('YYYY-MM-DD-HH:MM:SS');
   activePath;
   savingPath;
-  fileSavingName = 'labeled-' + Moment().format('YYYY-MM-DD-HH:MM:SS');
+  fileSavingName = 'labeled-' + this.startTime;
+  skipedFileSavingName = 'skiped-' + this.startTime;
+  skipedImages = [];
   fileSaingExt = '.json';
   delimiter = ';';
   labeledImages = [];
@@ -46,6 +49,12 @@ class Presenter {
   };
   get savedFilePath() {
     return Path.join(this.savingPath, this.fileSavingName + this.fileSaingExt);
+  }
+  get skipedFilePath() {
+    return Path.join(
+      this.savingPath,
+      this.skipedFileSavingName + this.fileSaingExt
+    );
   }
   loadSavedFile = async () => {
     try {
@@ -141,7 +150,11 @@ class Presenter {
       if (exist) {
       } else {
       }
-      fs.writeFile(savingPath, JSON.stringify(this.labeledImages), 'utf8');
+      await fs.writeFile(
+        savingPath,
+        JSON.stringify(this.labeledImages),
+        'utf8'
+      );
     } catch (err) {
       console.warn('writeFile', err);
       message.error('Failed to write file');
@@ -206,7 +219,7 @@ class Presenter {
     await this.retrieveLastImage();
   };
 
-  skipOne = () => {
+  skipOne = async () => {
     const { uri, extname, filename } = this.getCurrentImage();
     const { store, setStore } = this.getStore();
     const { currentIndex } = store;
@@ -214,6 +227,16 @@ class Presenter {
       setStore({
         currentIndex: currentIndex + 1
       });
+      this.skipedImages.push(filename);
+      await fs
+        .writeFile(
+          this.skipedFilePath,
+          JSON.stringify(this.skipedImages),
+          'utf8'
+        )
+        .catch(err => {
+          message.error('Failed to save skiped filenames');
+        });
     } else {
       message.error('This is the last image !');
     }

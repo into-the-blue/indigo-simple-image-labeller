@@ -1,6 +1,6 @@
 import React from 'react';
 import { SelectableItem } from './SelectableItem';
-import { Col, Input, Button } from 'antd';
+import { Col, Input, Button, message, Modal } from 'antd';
 import styles from '../labelImages.css';
 import { InputLabel } from './index';
 class Labels extends React.Component {
@@ -66,20 +66,59 @@ class Labels extends React.Component {
       isSelected = selectedValues.includes(value);
     }
     if (isSelected) {
+      message.warn(value + ' removed');
       this.setState({
         selectedValues: selectedValues.filter(o => o !== value)
       });
     } else {
       let _selectedValues = selectedValues;
       if (isRadio) {
-        _selectedValues = selectedValues.filter(
-          value => !options.some(o => o.value === value)
-        );
+        _selectedValues = selectedValues.filter(v => {
+          const bool = !options.some(o => o.value === v);
+          if (!bool) {
+            message.info(v + ' removed');
+          }
+          return bool;
+        });
       }
+      message.info(value + ' selected');
+
       this.setState({
         selectedValues: _selectedValues.concat(value)
       });
     }
+  };
+
+  _deleteOption = idx => (value, optionIndex) => {
+    const { labelObjs } = this.state;
+
+    const _labelObjs = labelObjs.map((o, i) => {
+      if (i !== idx) return o;
+      return {
+        ...o,
+        options: o.options.filter((_, i2) => i2 !== optionIndex)
+      };
+    });
+
+    this.setState({
+      labelObjs: _labelObjs
+    });
+  };
+
+  _deleteLabelObj = idx => {
+    Modal.confirm({
+      title: 'Confirm',
+      content: 'Delete this option group ?',
+      okText: 'Yes',
+      cancelText: 'Cancel',
+      onOk: () => {
+        const { labelObjs } = this.state;
+        const _labelObjs = labelObjs.filter((_, i) => i !== idx);
+        this.setState({
+          labelObjs: _labelObjs
+        });
+      }
+    });
   };
 
   get getSelectedLabels() {
@@ -100,11 +139,13 @@ class Labels extends React.Component {
     const { labelObjs, selectedValues, boundKeys } = this.state;
     return (
       <Col>
-        {/* <InputLabel _onPressAdd={this._onPressAdd} /> */}
         <Button onClick={this._createLabelObj('checkbox')}>
           {'Create checkbox'}
         </Button>
-        <Button onClick={this._createLabelObj('radio')}>
+        <Button
+          onClick={this._createLabelObj('radio')}
+          style={{ marginLeft: 15 }}
+        >
           {'Create radio box'}
         </Button>
         <div
@@ -121,6 +162,8 @@ class Labels extends React.Component {
                 onChangeBoundKey={this._onChangeBoundKey(index)}
                 onPressAdd={this._onPressAdd(index)}
                 onPressOption={this._onPressOption(index)}
+                deleteOption={this._deleteOption(index)}
+                deleteLabelObj={() => this._deleteLabelObj(index)}
               />
             );
           })}

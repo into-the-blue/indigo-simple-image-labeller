@@ -24,12 +24,21 @@ class Option extends React.Component {
       value,
       onPressOption,
       annotation,
-      boundKeys
+      boundKeys,
+      deleteOption
     } = this.props;
     const { key } = this.state;
     const keyBound = !key.length ? false : boundKeys.some(o => o.key === key);
     return (
-      <div className={styles.rowCenter}>
+      <div
+        className={styles.rowCenter}
+        style={{ marginTop: 5, marginBottom: 5 }}
+      >
+        <Icon
+          type={'minus-circle'}
+          onClick={deleteOption}
+          style={{ fontSize: 20, color: 'red', marginRight: 15 }}
+        />
         <Button
           onClick={() => onPressOption(value, isSelected)}
           type={isSelected ? 'primary' : 'default'}
@@ -41,8 +50,9 @@ class Option extends React.Component {
         <Input
           value={key}
           onChange={e => this.setState({ key: e.target.value.trim() })}
-          style={{ width: 40, marginLeft: 10, marginRight: 10 }}
+          style={{ width: 50, marginLeft: 10, marginRight: 10 }}
           disabled={keyBound}
+          placeholder={'keyboard'}
         />
         <Button
           disabled={keyBound}
@@ -80,12 +90,28 @@ export class SelectableItem extends React.Component {
       boundKeys,
       idx,
       onPressAdd,
-      onPressOption
+      onPressOption,
+      deleteOption,
+      deleteLabelObj
     } = this.props;
     const { options, type } = labelObj;
     return (
-      <div>
-        <h3>{type}</h3>
+      <div
+        style={{
+          padding: 10,
+          borderWidth: '0px 0px 0px 1px',
+          borderStyle: 'solid',
+          borderColor: 'grey'
+        }}
+      >
+        <div className={styles.rowCenter}>
+          <h3>{type}</h3>
+          <Icon
+            type={'minus-circle'}
+            onClick={deleteLabelObj}
+            style={{ color: 'red', fontSize: 25, marginLeft: 15 }}
+          />
+        </div>
         {options.map(({ value, annotation }, index) => (
           <Option
             key={'opt' + index}
@@ -96,6 +122,7 @@ export class SelectableItem extends React.Component {
             bindKey={kv => this.onChangeBind(kv, false)}
             unbindKey={kv => this.onChangeBind(kv, true)}
             onPressOption={onPressOption}
+            deleteOption={() => deleteOption(value, index)}
           />
         ))}
         <InputLabel onPressAdd={onPressAdd} />

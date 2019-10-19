@@ -50,7 +50,7 @@ export class InputLabel extends React.Component {
               annotation: e.target.value
             })
           }
-          style={{ width: 70 }}
+          style={{ width: 70, marginLeft: 10, marginRight: 10 }}
           placeholder={'annotation'}
         />
         <Button type={'primary'} onClick={this._onPressAdd}>
