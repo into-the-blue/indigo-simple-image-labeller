@@ -16,15 +16,17 @@ function verifyImages(filenames) {
   }
   return arr;
 }
-function uniqLabels(labels) {
+function _uniqLabels(labels) {
   return [...new Set(labels)];
 }
 function extractLabelsFromJson(data, delimiter) {
-  return uniqLabels(flatten(data.map(({ labels }) => labels.split(delimiter))));
+  return _uniqLabels(
+    flatten(data.map(({ labels }) => labels.split(delimiter)))
+  );
 }
 class Presenter {
   fileNames = [];
-  startTime = Moment().format('YYYY-MM-DD-HH:MM:SS');
+  startTime = Moment().format('YYYY-MM-DD');
   activePath;
   savingPath;
   fileSavingName = 'labeled-' + this.startTime;
@@ -79,14 +81,14 @@ class Presenter {
         }
         const data = await safelyReadFile(filePaths[0]);
         this.labeledImages = data;
-        const uniqLabels = extractLabelsFromJson(data, this.delimiter);
+        const uniqedLabels = extractLabelsFromJson(data, this.delimiter);
         const { setStore } = this.getStore();
         const lastImage = data[data.length - 1];
         const currentIndex =
           this.fileNames.findIndex(o => o === lastImage.filename) + 1;
         setStore({
           currentIndex,
-          labelsFromFile: uniqLabels
+          labelsFromFile: uniqedLabels
         });
       }
     } catch (err) {
@@ -157,9 +159,8 @@ class Presenter {
       ) {
         message.info('Labels not modified');
         return;
-      } else {
-        this.labeledImages[currentIndex].labels = labels.join(this.delimiter);
       }
+      this.labeledImages[currentIndex].labels = labels.join(this.delimiter);
     } else {
       const doc = {
         filename,

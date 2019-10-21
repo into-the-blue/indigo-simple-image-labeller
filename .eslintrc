@@ -81,6 +81,7 @@
     "no-return-assign": "off",
     "arrow-body-style": "off"
   },
+  "prefer-destructuring": "off",
   "plugins": ["flowtype", "import", "promise", "compat", "react"],
   "settings": {
     "import/resolver": {
