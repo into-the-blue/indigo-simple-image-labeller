@@ -76,7 +76,10 @@
       "error",
       { "extensions": [".js", ".jsx"] }
     ],
-    "react/prefer-stateless-function": "off"
+    "react/prefer-stateless-function": "off",
+    "no-unused-expressions": "off",
+    "no-return-assign": "off",
+    "arrow-body-style": "off"
   },
   "plugins": ["flowtype", "import", "promise", "compat", "react"],
   "settings": {

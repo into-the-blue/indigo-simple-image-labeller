@@ -1,23 +1,10 @@
 import React from 'react';
 import Presenter from './labelImages.presenter';
-import { Button, Row, Col, Modal } from 'antd';
+import { Button, Row, Col, Modal, Tag, Icon } from 'antd';
 import Labels from './components/Labels';
 import styles from './labelImages.css';
 import ImageBrowser from './components/ImageBrowser';
 
-// {
-//   options: [
-//     {
-//       type: 'checkbox' | 'radio',
-//       options: [
-//         {
-//           value: '',
-//           annotation: ''
-//         }
-//       ]
-//     }
-//   ];
-// }
 class LabelImages extends React.Component {
   _labels;
   constructor(props) {
@@ -26,7 +13,9 @@ class LabelImages extends React.Component {
       currentIndex: 0,
       imageCount: 0,
       activeDir: '',
-      modalVisible: false
+      modalVisible: false,
+      mode: 'standard',
+      labelsFromFile: []
     };
     this.presenter = new Presenter(this.getStore, this);
   }
@@ -42,6 +31,10 @@ class LabelImages extends React.Component {
       })
   });
 
+  get getAllLabels() {
+    return this._labels && this._labels.getAllLabels;
+  }
+
   get getSelectedLabels() {
     return this._labels && this._labels.getSelectedLabels;
   }
@@ -55,7 +48,7 @@ class LabelImages extends React.Component {
       <div
         style={{ overflow: 'scroll', height: '100vh', paddingBottom: '15vh' }}
       >
-        <div className={styles.row}>
+        <div className={styles.rowCenter}>
           <Button onClick={this.presenter.selectFolder}>
             {'select folder'}
           </Button>
@@ -65,10 +58,23 @@ class LabelImages extends React.Component {
           >
             {'restore form local'}
           </Button>
-          {this._renderBrief()}
+          <Button
+            onClick={this.presenter.reviewFile}
+            style={{ marginLeft: 20 }}
+          >
+            {'review file'}
+          </Button>
+          <Icon
+            type="reload"
+            onClick={() => this.forceUpdate()}
+            style={{ marginLeft: 20, fontSize: 25 }}
+          />
         </div>
         <div>
-          {this._renderImageBrowser()}
+          <div className={styles.rowCenter}>
+            {this._renderImageBrowser()}
+            {this._renderBrief()}
+          </div>
           {this._renderLabels()}
         </div>
         {this._labels && (
@@ -77,6 +83,12 @@ class LabelImages extends React.Component {
             visible={this.state.modalVisible}
             okText={'Ok'}
             cancelText={'Cancel'}
+            onCancel={() =>
+              this.setState({
+                modalVisible: false
+              })
+            }
+            onOk={this.presenter.nextImage}
           >
             {this.getSelectedLabels.map((label, index) => {
               return <p style={{ color: 'blue' }}>{label}</p>;
@@ -88,6 +100,7 @@ class LabelImages extends React.Component {
   }
   _renderBrief = () => {
     const { activeDir, imageCount, currentIndex } = this.state;
+    const unassignedLabels = this.presenter.unassignedLabels;
     return (
       <div style={{ marginLeft: 20 }}>
         <h4>{'Active Dir: ' + activeDir}</h4>
@@ -95,6 +108,14 @@ class LabelImages extends React.Component {
         <h4>{'Labeled: ' + this.presenter.labeledImages.length}</h4>
         <h4>{'Json: ' + this.presenter.fileSavingName}</h4>
         <h4>{'Delimiter: ' + this.presenter.delimiter}</h4>
+        {!!unassignedLabels.length && (
+          <>
+            <h4>{'Unassigned labels'}</h4>
+            {unassignedLabels.map(value => (
+              <Tag key={value}>{value}</Tag>
+            ))}
+          </>
+        )}
       </div>
     );
   };
@@ -103,7 +124,7 @@ class LabelImages extends React.Component {
     const { currentIndex } = this.state;
     const image = this.presenter.getCurrentImage(currentIndex);
     return (
-      <div style={{ flex: 1 }}>
+      <div style={{ flex: 1, maxWidth: 1000 }}>
         {image && (
           <ImageBrowser
             image={image}

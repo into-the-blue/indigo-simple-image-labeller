@@ -3,6 +3,21 @@ import { SelectableItem } from './SelectableItem';
 import { Col, Input, Button, message, Modal } from 'antd';
 import styles from '../labelImages.css';
 import { InputLabel } from './index';
+import { flatten } from 'lodash';
+
+// {
+//   options: [
+//     {
+//       type: 'checkbox' | 'radio',
+//       options: [
+//         {
+//           value: '',
+//           annotation: ''
+//         }
+//       ]
+//     }
+//   ];
+// }
 class Labels extends React.Component {
   constructor(props) {
     super(props);
@@ -123,6 +138,14 @@ class Labels extends React.Component {
 
   get getSelectedLabels() {
     return this.state.selectedValues;
+  }
+
+  get getAllLabels() {
+    return [
+      ...new Set(
+        flatten(this.state.labelObjs.map(o => o.options.map(o => o.value)))
+      )
+    ];
   }
 
   resetSelectedLabels = () => {

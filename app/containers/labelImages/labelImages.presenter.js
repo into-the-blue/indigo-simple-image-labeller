@@ -4,6 +4,8 @@ import fs from 'fs-extra';
 import Mousetrap from 'mousetrap';
 import Path from 'path';
 import Moment from 'moment';
+import { selectFile, safelyReadFile } from '../../utils';
+import { flatten } from 'lodash';
 const IMAGE_EXT = /\.(bmp|jpg|jpeg|png|tif|gif|pcx|tga|exif|fpx|svg|psd|cdr|pcd|dxf|ufo|eps|ai|raw|wmf|webp)+$/;
 function verifyImages(filenames) {
   const arr = [];
@@ -13,6 +15,12 @@ function verifyImages(filenames) {
     }
   }
   return arr;
+}
+function uniqLabels(labels) {
+  return [...new Set(labels)];
+}
+function extractLabelsFromJson(data, delimiter) {
+  return uniqLabels(flatten(data.map(({ labels }) => labels.split(delimiter))));
 }
 class Presenter {
   fileNames = [];
@@ -25,27 +33,23 @@ class Presenter {
   fileSaingExt = '.json';
   delimiter = ';';
   labeledImages = [];
+  _reviewingFile;
   constructor(getStore, viewModel) {
     this.getStore = getStore;
     this.viewModel = viewModel;
   }
   componentDidMount() {}
 
-  selectFolder = () => {
-    const win = remote.getCurrentWindow();
-    remote.dialog.showOpenDialog(
-      win,
-      {
-        properties: ['openDirectory']
-      },
-      filePaths => {
-        // console.log(filePaths);
-        if (!filePaths) return;
-        if (filePaths[0]) {
-          this.loadImagesFromPath(filePaths[0]);
-        }
+  selectFolder = async () => {
+    try {
+      const filePaths = await selectFile('openDirectory');
+      if (!filePaths) return;
+      if (filePaths[0]) {
+        this.loadImagesFromPath(filePaths[0]);
       }
-    );
+    } catch (err) {
+      console.error(err);
+    }
   };
   get savedFilePath() {
     return Path.join(this.savingPath, this.fileSavingName + this.fileSaingExt);
@@ -56,47 +60,48 @@ class Presenter {
       this.skippedFileSavingName + this.fileSaingExt
     );
   }
+
+  /**
+   *
+   *
+   * @memberof Presenter
+   * load saved file
+   * retrieve labels from file
+   */
   loadSavedFile = async () => {
     try {
       if (!this.activePath)
         return message.error('Please choose a folder first');
-      const win = remote.getCurrentWindow();
-      remote.dialog.showOpenDialog(
-        win,
-        {
-          properties: ['openFile']
-        },
-        async filePaths => {
-          if (!filePaths) return;
-          if (filePaths[0]) {
-            if (!/\.json$/.test(filePaths[0])) {
-              return message.error('Only JSON files are supported');
-            }
-            let data = await fs.readFile(filePaths[0], 'utf8');
-            if (!data) return message.error('No data in file');
-            data = JSON.parse(data);
-            this.labeledImages = data;
-            const allLabels = new Set();
-            for (let i = 0; i < data.length; i++) {
-              const { labels } = data[i];
-              labels.split(this.delimiter).forEach(o => allLabels.add(o));
-            }
-            const { setStore } = this.getStore();
-            const lastImage = data[data.length - 1];
-            const currentIndex =
-              this.fileNames.findIndex(o => o === lastImage.filename) + 1;
-            setStore({
-              currentIndex,
-              options: [...allLabels]
-            });
-          }
+      const filePaths = await selectFile('openFile');
+      if (filePaths[0]) {
+        if (!/\.json$/.test(filePaths[0])) {
+          return message.error('Only JSON files are supported');
         }
-      );
+        const data = await safelyReadFile(filePaths[0]);
+        this.labeledImages = data;
+        const uniqLabels = extractLabelsFromJson(data, this.delimiter);
+        const { setStore } = this.getStore();
+        const lastImage = data[data.length - 1];
+        const currentIndex =
+          this.fileNames.findIndex(o => o === lastImage.filename) + 1;
+        setStore({
+          currentIndex,
+          labelsFromFile: uniqLabels
+        });
+      }
     } catch (err) {
       console.error(err);
-      message.error('load saved file');
+      message.error('failed to load saved file');
     }
   };
+
+  /**
+   *
+   *
+   * @memberof Presenter
+   *
+   * read files under the folder
+   */
   loadImagesFromPath = async path => {
     try {
       const hide = message.loading('Reading files');
@@ -118,10 +123,19 @@ class Presenter {
     }
   };
 
+  /**
+   *
+   *
+   * @memberof Presenter
+   * get image from currentIndex
+   */
   getCurrentImage = () => {
-    const { currentIndex } = this.getStore().store;
+    const { currentIndex, mode } = this.getStore().store;
     if (!this.fileNames.length) return null;
-    const filename = this.fileNames[currentIndex];
+    let filename = this.fileNames[currentIndex];
+    if (mode === 'review') {
+      filename = this.labeledImages[currentIndex].filename;
+    }
     return {
       uri: Path.join(this.activePath, filename),
       filename,
@@ -130,22 +144,46 @@ class Presenter {
   };
 
   saveImageAndLabel = async (filename, labels) => {
-    const doc = {
-      filename,
-      labels: labels.join(this.delimiter)
-    };
-    console.log(filename, labels);
-    this.labeledImages.push(doc);
+    const { currentIndex } = this.getStore().store;
+    if (this.isReviewMode) {
+      const origin = this.labeledImages[currentIndex];
+      if (origin.filename !== filename) {
+        message.error(`filename not match ${origin.filename} ${filename}`);
+        console.error(`filename not match ${origin.filename} ${filename}`);
+      }
+      if (
+        origin.filename === filename &&
+        origin.labels === labels.join(this.delimiter)
+      ) {
+        message.info('Labels not modified');
+        return;
+      } else {
+        this.labeledImages[currentIndex].labels = labels.join(this.delimiter);
+      }
+    } else {
+      const doc = {
+        filename,
+        labels: labels.join(this.delimiter)
+      };
+      this.labeledImages.push(doc);
+    }
     await this.writeFile();
   };
 
+  /**
+   *
+   *
+   * @memberof Presenter
+   *
+   * write this.labeledImages to json file
+   */
   writeFile = async () => {
     if (!this.labeledImages.length) return;
     try {
-      const exist = await fs.exists(this.savedFilePath);
-      if (exist) {
-      } else {
-      }
+      // const exist = await fs.exists(this.savedFilePath);
+      // if (exist) {
+      // } else {
+      // }
       await fs.writeFile(
         this.savedFilePath,
         JSON.stringify(this.labeledImages),
@@ -157,9 +195,22 @@ class Presenter {
     }
   };
 
+  get isReviewMode() {
+    const { store, setStore } = this.getStore();
+    const { currentIndex, mode } = store;
+    const isReviewMode = mode === 'review';
+    return isReviewMode;
+  }
+
+  /**
+   *
+   *
+   * @memberof Presenter
+   * get last image
+   */
   retrieveLastImage = async () => {
     const { store, setStore } = this.getStore();
-    const { currentIndex } = store;
+    const { currentIndex, mode } = store;
     const hide = message.loading();
     try {
       if (!(await fs.exists(this.savedFilePath))) {
@@ -189,18 +240,31 @@ class Presenter {
         );
         console.error(savedLastFilename, last.filename);
       } else {
-        this.labeledImages.pop();
+        if (!this.isReviewMode) {
+          this.labeledImages.pop();
+        }
         // todo last image display skipped one
         setStore({
           currentIndex: currentIndex - 1
         });
-        this.viewModel.setSelectedLabels(last.labels.split(this.delimiter));
-        await this.writeFile();
+        this.setSelectedLabels(last.labels);
+        if (!this.isReviewMode) {
+          await this.writeFile();
+        }
         hide();
       }
     } catch (err) {
       console.warn('retrieveLastImage', err);
       message.error('retrieveLastImage error');
+    }
+  };
+
+  setSelectedLabels = labels => {
+    if (Array.isArray(labels)) {
+      this.viewModel.setSelectedLabels(labels);
+    }
+    if (typeof labels === 'string') {
+      this.viewModel.setSelectedLabels(labels.split(this.delimiter));
     }
   };
 
@@ -214,9 +278,12 @@ class Presenter {
 
   skipOne = async () => {
     const { uri, extname, filename } = this.getCurrentImage();
-    const { store, setStore } = this.getStore();
+    const { store, setStore, mode } = this.getStore();
     const { currentIndex } = store;
-    if (currentIndex < this.fileNames.length - 1) {
+    const maxIndex = this.isReviewMode
+      ? this.labeledImages.length - 1
+      : this.fileNames.length - 1;
+    if (currentIndex < maxIndex) {
       setStore({
         currentIndex: currentIndex + 1
       });
@@ -233,21 +300,52 @@ class Presenter {
             message.error('Failed to save skipped filenames');
           });
       }
+      if (this.isReviewMode) {
+        this.labeledImages.filter((_, idx) => idx !== currentIndex);
+        await this.writeFile();
+      }
     } else {
       message.error('This is the last image !');
     }
   };
 
+  /**
+   *
+   *
+   * @readonly
+   * @memberof Presenter
+   * get selected labels
+   */
   get selectedLabels() {
     return this.viewModel.getSelectedLabels;
   }
+
+  /**
+   *
+   *
+   * @memberof Presenter
+   * reset selected labels
+   */
   resetSelectedLabels = () => this.viewModel.resetSelectedLabels();
+
+  /**
+   *
+   *
+   * @memberof Presenter
+   * get next image
+   */
   nextImage = async () => {
     const { uri, extname, filename } = this.getCurrentImage();
     const { store, setStore } = this.getStore();
-    const { currentIndex, modalVisible } = store;
-    if (!this.selectedLabels.length)
+    const { currentIndex, modalVisible, mode } = store;
+
+    const maxLength = this.isReviewMode
+      ? this.labeledImages.length - 1
+      : this.fileNames.length - 1;
+
+    if (!this.selectedLabels.length) {
       return message.error('Please select label !');
+    }
     if (!modalVisible) {
       return setStore({
         modalVisible: true
@@ -256,14 +354,53 @@ class Presenter {
     setStore({
       modalVisible: false
     });
-    if (currentIndex < this.fileNames.length - 1) {
+    if (currentIndex < maxLength) {
+      // save labeled images
       await this.saveImageAndLabel(filename, this.selectedLabels);
       setStore({
         currentIndex: currentIndex + 1
       });
-      this.resetSelectedLabels();
+      if (this.isReviewMode) {
+        this.setSelectedLabels(this.labeledImages[currentIndex + 1].labels);
+      } else {
+        this.resetSelectedLabels();
+      }
     } else {
       message.error('This is the last image !');
+    }
+  };
+
+  get unassignedLabels() {
+    const { setStore, store } = this.getStore();
+    const { labelsFromFile } = store;
+    if (!this.viewModel.getAllLabels) return [];
+    return labelsFromFile.filter(v => !this.viewModel.getAllLabels.includes(v));
+  }
+  /**
+   *
+   *
+   * @memberof Presenter
+   * load image from file,
+   * review file
+   */
+  reviewFile = async () => {
+    const { setStore, store } = this.getStore();
+    try {
+      const filePaths = await selectFile('openFile');
+      if (filePaths[0]) {
+        this._reviewingFile = filePaths[0];
+        const data = await safelyReadFile(filePaths[0]);
+        this.labeledImages = data;
+        const uniqedLabels = extractLabelsFromJson(data, this.delimiter);
+        setStore({
+          labelsFromFile: uniqedLabels,
+          mode: 'review',
+          currentIndex: 0
+        });
+        this.setSelectedLabels(this.labeledImages[0].labels);
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 }
