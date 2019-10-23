@@ -277,6 +277,13 @@ class Presenter {
     await this.retrieveLastImage();
   };
 
+  /**
+   *
+   *
+   * @memberof Presenter
+   * skip one image
+   * if review delete 
+   */
   skipOne = async () => {
     const { uri, extname, filename } = this.getCurrentImage();
     const { store, setStore, mode } = this.getStore();

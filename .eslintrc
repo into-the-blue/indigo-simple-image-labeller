@@ -59,6 +59,16 @@
     "no-plusplus": "off",
     "eqeqeq": "off",
     "jsx-a11y/alt-text": "warn",
+    "prefer-destructuring": [
+      "off",
+      {
+        "array": true,
+        "object": true
+      },
+      {
+        "enforceForRenamedProperties": false
+      }
+    ],
     "react/sort-comp": [
       "off",
       {
@@ -81,7 +91,6 @@
     "no-return-assign": "off",
     "arrow-body-style": "off"
   },
-  "prefer-destructuring": "off",
   "plugins": ["flowtype", "import", "promise", "compat", "react"],
   "settings": {
     "import/resolver": {
