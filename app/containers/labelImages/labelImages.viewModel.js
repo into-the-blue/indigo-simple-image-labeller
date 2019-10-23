@@ -1,4 +1,5 @@
 import React from 'react';
+import { withRouter } from 'react-router-dom';
 import Presenter from './labelImages.presenter';
 import { Button, Row, Col, Modal, Tag, Icon } from 'antd';
 import Labels from './components/Labels';

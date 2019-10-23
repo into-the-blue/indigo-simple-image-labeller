@@ -1,26 +1,26 @@
 import React from 'react';
 import { render } from 'react-dom';
 import { AppContainer } from 'react-hot-loader';
-import Root from './containers/Root';
-import { configureStore, history } from './store/configureStore';
+// import { configureStore, history } from './store/configureStore';
+import Routes from './Routes';
 import './app.global.css';
 import 'antd/dist/antd.css';
-const store = configureStore();
+// const store = configureStore();
 
 render(
   <AppContainer>
-    <Root store={store} history={history} />
+    <Routes />
   </AppContainer>,
   document.getElementById('root')
 );
 
 if (module.hot) {
-  module.hot.accept('./containers/Root', () => {
+  module.hot.accept('./Routes', () => {
     // eslint-disable-next-line global-require
-    const NextRoot = require('./containers/Root').default;
+    const NextRoot = require('./Routes').default;
     render(
       <AppContainer>
-        <NextRoot store={store} history={history} />
+        <NextRoot />
       </AppContainer>,
       document.getElementById('root')
     );
