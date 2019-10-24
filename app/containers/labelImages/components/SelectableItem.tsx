@@ -1,8 +1,22 @@
-import React, { useState } from 'react';
+import * as React from 'react';
 import { Checkbox, Row, Icon, Input, Button, Tag } from 'antd';
-import styles from '../labelImages.css';
+import '../labelImages.css';
 import { InputLabel } from './index';
-class Option extends React.Component {
+import { IBoundKey, ILabelObj, IOption } from '../../../models';
+interface IProps {
+  isSelected: boolean;
+  bindKey: (v: IBoundKey) => void;
+  value: string;
+  onPressOption: (v: string, isSelected: boolean) => void;
+  annotation: string;
+  boundKeys: IBoundKey[];
+  deleteOption: () => void;
+  unbindKey: (v: IBoundKey) => void;
+}
+interface IState {
+  key: string;
+}
+class Option extends React.Component<IProps, IState> {
   constructor(props) {
     super(props);
     this.state = {
@@ -30,10 +44,7 @@ class Option extends React.Component {
     const { key } = this.state;
     const keyBound = !key.length ? false : boundKeys.some(o => o.key === key);
     return (
-      <div
-        className={styles.rowCenter}
-        style={{ marginTop: 5, marginBottom: 5 }}
-      >
+      <div className={'rowCenter'} style={{ marginTop: 5, marginBottom: 5 }}>
         <Icon
           type={'minus-circle'}
           onClick={deleteOption}
@@ -71,7 +82,21 @@ class Option extends React.Component {
     );
   }
 }
-export class SelectableItem extends React.Component {
+
+interface IIProps {
+  boundKeys: IBoundKey[];
+  onChangeBoundKey;
+  labelObj: ILabelObj;
+  selectedValues: string[];
+  idx: number;
+  onPressAdd: (option: IOption) => void;
+  onPressOption: (v: string, isSelected: boolean) => void;
+  deleteOption: (v: string, index: number) => void;
+  deleteLabelObj: () => void;
+}
+
+interface IIState {}
+export class SelectableItem extends React.Component<IIProps, IIState> {
   onChangeBind = (kv, isBound) => {
     const { boundKeys, onChangeBoundKey } = this.props;
     if (isBound) {
@@ -104,7 +129,7 @@ export class SelectableItem extends React.Component {
           borderColor: 'grey'
         }}
       >
-        <div className={styles.rowCenter}>
+        <div className={'rowCenter'}>
           <h3>{type}</h3>
           <Icon
             type={'minus-circle'}

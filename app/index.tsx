@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import { render } from 'react-dom';
 import { AppContainer } from 'react-hot-loader';
 // import { configureStore, history } from './store/configureStore';
@@ -16,7 +16,6 @@ render(
 
 if (module.hot) {
   module.hot.accept('./Routes', () => {
-    // eslint-disable-next-line global-require
     const NextRoot = require('./Routes').default;
     render(
       <AppContainer>

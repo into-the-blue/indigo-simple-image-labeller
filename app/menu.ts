@@ -1,8 +1,14 @@
 // @flow
-import { app, Menu, shell, BrowserWindow } from 'electron';
+import {
+  app,
+  Menu,
+  shell,
+  BrowserWindow,
+  MenuItemConstructorOptions
+} from 'electron';
 
 export default class MenuBuilder {
-  mainWindow: BrowserWindow;
+  private mainWindow: BrowserWindow;
 
   constructor(mainWindow: BrowserWindow) {
     this.mainWindow = mainWindow;
@@ -27,8 +33,8 @@ export default class MenuBuilder {
     return menu;
   }
 
-  setupDevelopmentEnvironment() {
-    this.mainWindow.openDevTools();
+  private setupDevelopmentEnvironment() {
+    this.mainWindow.webContents.openDevTools();
     this.mainWindow.webContents.on('context-menu', (e, props) => {
       const { x, y } = props;
 
@@ -36,14 +42,15 @@ export default class MenuBuilder {
         {
           label: 'Inspect element',
           click: () => {
-            this.mainWindow.inspectElement(x, y);
+            this.mainWindow.webContents.inspectElement(x, y);
           }
         }
+        // @ts-ignore
       ]).popup(this.mainWindow);
     });
   }
 
-  buildDarwinTemplate() {
+  buildDarwinTemplate(): MenuItemConstructorOptions[] {
     const subMenuAbout = {
       label: 'Electron',
       submenu: [
@@ -74,7 +81,7 @@ export default class MenuBuilder {
           }
         }
       ]
-    };
+    } as MenuItemConstructorOptions;
     const subMenuEdit = {
       label: 'Edit',
       submenu: [
@@ -90,7 +97,7 @@ export default class MenuBuilder {
           selector: 'selectAll:'
         }
       ]
-    };
+    } as MenuItemConstructorOptions;
     const subMenuViewDev = {
       label: 'View',
       submenu: [
@@ -112,11 +119,11 @@ export default class MenuBuilder {
           label: 'Toggle Developer Tools',
           accelerator: 'Alt+Command+I',
           click: () => {
-            this.mainWindow.toggleDevTools();
+            this.mainWindow.webContents.toggleDevTools();
           }
         }
       ]
-    };
+    } as MenuItemConstructorOptions;
     const subMenuViewProd = {
       label: 'View',
       submenu: [
@@ -128,7 +135,7 @@ export default class MenuBuilder {
           }
         }
       ]
-    };
+    } as MenuItemConstructorOptions;
     const subMenuWindow = {
       label: 'Window',
       submenu: [
@@ -141,7 +148,7 @@ export default class MenuBuilder {
         { type: 'separator' },
         { label: 'Bring All to Front', selector: 'arrangeInFront:' }
       ]
-    };
+    } as MenuItemConstructorOptions;
     const subMenuHelp = {
       label: 'Help',
       submenu: [
@@ -180,7 +187,7 @@ export default class MenuBuilder {
     return [subMenuAbout, subMenuEdit, subMenuView, subMenuWindow, subMenuHelp];
   }
 
-  buildDefaultTemplate() {
+  buildDefaultTemplate = (): MenuItemConstructorOptions[] => {
     const templateDefault = [
       {
         label: '&File',
@@ -223,7 +230,7 @@ export default class MenuBuilder {
                   label: 'Toggle &Developer Tools',
                   accelerator: 'Alt+Ctrl+I',
                   click: () => {
-                    this.mainWindow.toggleDevTools();
+                    this.mainWindow.webContents.toggleDevTools();
                   }
                 }
               ]
@@ -273,5 +280,5 @@ export default class MenuBuilder {
     ];
 
     return templateDefault;
-  }
+  };
 }

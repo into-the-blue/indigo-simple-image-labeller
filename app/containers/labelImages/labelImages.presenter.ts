@@ -1,13 +1,13 @@
-import { dialog, remote, BrowserWindow } from 'electron';
 import { message } from 'antd';
-import fs from 'fs-extra';
-import Mousetrap from 'mousetrap';
-import Path from 'path';
-import Moment from 'moment';
+import * as fs from 'fs-extra';
+import * as Mousetrap from 'mousetrap';
+import * as Path from 'path';
+import * as Moment from 'moment';
 import { selectFile, safelyReadFile } from '../../utils';
 import { flatten } from 'lodash';
+import { ILabeledImage, IGetStore } from '../../models';
 const IMAGE_EXT = /\.(bmp|jpg|jpeg|png|tif|gif|pcx|tga|exif|fpx|svg|psd|cdr|pcd|dxf|ufo|eps|ai|raw|wmf|webp)+$/;
-function verifyImages(filenames) {
+function verifyImages(filenames: string[]) {
   const arr = [];
   for (let i = 0; i < filenames.length; i++) {
     if (IMAGE_EXT.test(filenames[i].toLowerCase().trim())) {
@@ -16,30 +16,35 @@ function verifyImages(filenames) {
   }
   return arr;
 }
-function _uniqLabels(labels) {
+function _uniqLabels(labels: string[]) {
   return [...new Set(labels)];
 }
-function extractLabelsFromJson(data, delimiter) {
+function extractLabelsFromJson(data: ILabeledImage[], delimiter: string) {
   return _uniqLabels(
     flatten(data.map(({ labels }) => labels.split(delimiter)))
   );
 }
+export interface IState {
+  currentIndex: number;
+  imageCount: number;
+  activeDir: string;
+  modalVisible: boolean;
+  mode: 'standard' | 'review';
+  labelsFromFile: string[];
+}
 class Presenter {
-  fileNames = [];
-  startTime = Moment().format('YYYY-MM-DD');
-  activePath;
-  savingPath;
-  fileSavingName = 'labeled-' + this.startTime;
-  skippedFileSavingName = 'skipped-' + this.startTime;
-  skippedImages = [];
-  fileSaingExt = '.json';
-  delimiter = ';';
-  labeledImages = [];
-  _reviewingFile;
-  constructor(getStore, viewModel) {
-    this.getStore = getStore;
-    this.viewModel = viewModel;
-  }
+  fileNames: string[] = [];
+  startTime: string = Moment().format('YYYY-MM-DD');
+  activePath?: string;
+  savingPath?: string;
+  fileSavingName: string = 'labeled-' + this.startTime;
+  skippedFileSavingName: string = 'skipped-' + this.startTime;
+  skippedImages: string[] = [];
+  fileSaingExt: string = '.json';
+  delimiter: string = ';';
+  labeledImages: ILabeledImage[] = [];
+  _reviewingFile?: string;
+  constructor(public getStore: IGetStore<IState>, public viewModel: any) {}
   componentDidMount() {}
 
   selectFolder = async () => {
@@ -79,7 +84,7 @@ class Presenter {
         if (!/\.json$/.test(filePaths[0])) {
           return message.error('Only JSON files are supported');
         }
-        const data = await safelyReadFile(filePaths[0]);
+        const data = (await safelyReadFile(filePaths[0])) as ILabeledImage[];
         this.labeledImages = data;
         const uniqedLabels = extractLabelsFromJson(data, this.delimiter);
         const { setStore } = this.getStore();
@@ -104,7 +109,7 @@ class Presenter {
    *
    * read files under the folder
    */
-  loadImagesFromPath = async path => {
+  loadImagesFromPath = async (path: string) => {
     try {
       const hide = message.loading('Reading files');
       this.activePath = path;
@@ -212,9 +217,9 @@ class Presenter {
   retrieveLastImage = async () => {
     const { store, setStore } = this.getStore();
     const { currentIndex, mode } = store;
-    const hide = message.loading();
+    const hide = message.loading('');
     try {
-      if (!(await fs.exists(this.savedFilePath))) {
+      if (!fs.existsSync(this.savedFilePath)) {
         return message.error('File not exists!');
       }
       let data = await fs.readFile(this.savedFilePath, 'utf8');
@@ -282,12 +287,12 @@ class Presenter {
    *
    * @memberof Presenter
    * skip one image
-   * if review delete 
+   * if review delete
    */
   skipOne = async () => {
     const { uri, extname, filename } = this.getCurrentImage();
-    const { store, setStore, mode } = this.getStore();
-    const { currentIndex } = store;
+    const { store, setStore } = this.getStore();
+    const { currentIndex, mode } = store;
     const maxIndex = this.isReviewMode
       ? this.labeledImages.length - 1
       : this.fileNames.length - 1;
@@ -397,7 +402,7 @@ class Presenter {
       const filePaths = await selectFile('openFile');
       if (filePaths[0]) {
         this._reviewingFile = filePaths[0];
-        const data = await safelyReadFile(filePaths[0]);
+        const data = (await safelyReadFile(filePaths[0])) as ILabeledImage[];
         this.labeledImages = data;
         const uniqedLabels = extractLabelsFromJson(data, this.delimiter);
         setStore({

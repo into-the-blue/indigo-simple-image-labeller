@@ -1,24 +1,16 @@
-import React from 'react';
+import * as React from 'react';
 import { SelectableItem } from './SelectableItem';
 import { Col, Input, Button, message, Modal } from 'antd';
-import styles from '../labelImages.css';
-import { InputLabel } from './index';
+import '../labelImages.css';
+import {} from './index';
 import { flatten } from 'lodash';
-
-// {
-//   options: [
-//     {
-//       type: 'checkbox' | 'radio',
-//       options: [
-//         {
-//           value: '',
-//           annotation: ''
-//         }
-//       ]
-//     }
-//   ];
-// }
-class Labels extends React.Component {
+import { ILabelObj, IBoundKey, IOption, ILabelObjType } from '../../../models';
+interface IState {
+  labelObjs: ILabelObj[];
+  selectedValues: string[];
+  boundKeys: IBoundKey[];
+}
+class Labels extends React.Component<any, IState> {
   constructor(props) {
     super(props);
     this.state = {
@@ -27,7 +19,7 @@ class Labels extends React.Component {
       boundKeys: []
     };
   }
-  _onPressAdd = idx => option => {
+  _onPressAdd = (idx: number) => (option: IOption) => {
     const { labelObjs } = this.state;
     const _labelObjs = labelObjs.map((o, i) => {
       if (i !== idx) return o;
@@ -51,7 +43,10 @@ class Labels extends React.Component {
    * operation:'add' | 'delete'
    * }
    */
-  _onChangeBoundKey = idx => (boundKeys, updated) => {
+  _onChangeBoundKey = (idx: number) => (
+    boundKeys: IBoundKey[],
+    updated: { kv: IBoundKey; operation: 'add' | 'delete' }
+  ) => {
     this.setState({ boundKeys });
     const {
       kv: { key, value },
@@ -64,7 +59,7 @@ class Labels extends React.Component {
     }
   };
 
-  _createLabelObj = type => () => {
+  _createLabelObj = (type: ILabelObjType) => () => {
     const { labelObjs } = this.state;
     this.setState({
       labelObjs: labelObjs.concat({
@@ -73,7 +68,7 @@ class Labels extends React.Component {
       })
     });
   };
-  _onPressOption = idx => (value, isSelected) => {
+  _onPressOption = (idx: number) => (value: string, isSelected?: boolean) => {
     const { selectedValues, labelObjs } = this.state;
     const { type, options } = labelObjs[idx];
     const isRadio = type === 'radio';
@@ -104,7 +99,7 @@ class Labels extends React.Component {
     }
   };
 
-  _deleteOption = idx => (value, optionIndex) => {
+  _deleteOption = (idx: number) => (value: string, optionIndex: number) => {
     const { labelObjs } = this.state;
 
     const _labelObjs = labelObjs.map((o, i) => {
@@ -143,7 +138,7 @@ class Labels extends React.Component {
   get getAllLabels() {
     return [
       ...new Set(
-        flatten(this.state.labelObjs.map(o => o.options.map(o => o.value)))
+        flatten(this.state.labelObjs.map(o => o.options.map(o2 => o2.value)))
       )
     ];
   }
@@ -153,7 +148,7 @@ class Labels extends React.Component {
       selectedValues: []
     });
   };
-  setSelectedLabels = labels => {
+  setSelectedLabels = (labels: string[]) => {
     this.setState({
       selectedValues: labels
     });

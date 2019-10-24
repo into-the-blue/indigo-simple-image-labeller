@@ -1,6 +1,16 @@
-import React, { useState } from 'react';
+import * as React from 'react';
 import { Input, Button } from 'antd';
-import styles from '../labelImages.css';
+import { IOption } from '../../../models';
+import '../labelImages.css';
+
+interface IProps {
+  onPressAdd: (option: IOption) => void;
+}
+
+interface IState {
+  value: string;
+  annotation: string;
+}
 
 /**
  *
@@ -9,7 +19,7 @@ import styles from '../labelImages.css';
  * @param {*} { onPressAdd({value,annotation}) }
  * @returns
  */
-export class InputLabel extends React.Component {
+export class InputLabel extends React.Component<IProps, IState> {
   constructor(props) {
     super(props);
     this.state = {
@@ -32,7 +42,7 @@ export class InputLabel extends React.Component {
   render() {
     const { value, annotation } = this.state;
     return (
-      <div className={styles.rowCenter}>
+      <div className={'rowCenter'}>
         <Input
           value={value}
           onChange={e =>

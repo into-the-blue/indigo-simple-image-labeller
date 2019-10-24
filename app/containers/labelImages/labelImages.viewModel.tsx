@@ -1,13 +1,14 @@
-import React from 'react';
+import * as React from 'react';
 import { withRouter } from 'react-router-dom';
-import Presenter from './labelImages.presenter';
+import Presenter, { IState } from './labelImages.presenter';
 import { Button, Row, Col, Modal, Tag, Icon } from 'antd';
 import Labels from './components/Labels';
-import styles from './labelImages.css';
+import './labelImages.css';
 import ImageBrowser from './components/ImageBrowser';
-
-class LabelImages extends React.Component {
-  _labels;
+import { IGetStore } from '../../models';
+class LabelImages extends React.Component<any, IState> {
+  _labels: any;
+  presenter: Presenter;
   constructor(props) {
     super(props);
     this.state = {
@@ -24,9 +25,9 @@ class LabelImages extends React.Component {
     this.presenter.componentDidMount();
   }
 
-  getStore = () => ({
+  getStore: IGetStore<IState> = () => ({
     store: this.state,
-    setStore: next =>
+    setStore: (next: Pick<IState, keyof IState>) =>
       this.setState({
         ...next
       })
@@ -42,14 +43,14 @@ class LabelImages extends React.Component {
   resetSelectedLabels = () => {
     this._labels && this._labels.resetSelectedLabels();
   };
-  setSelectedLabels = labels =>
+  setSelectedLabels = (labels: string[]) =>
     this._labels && this._labels.setSelectedLabels(labels);
   render() {
     return (
       <div
         style={{ overflow: 'scroll', height: '100vh', paddingBottom: '15vh' }}
       >
-        <div className={styles.rowCenter}>
+        <div className={'rowCenter'}>
           <Button onClick={this.presenter.selectFolder}>
             {'select folder'}
           </Button>
@@ -66,13 +67,13 @@ class LabelImages extends React.Component {
             {'review file'}
           </Button>
           <Icon
-            type="reload"
+            type={'reload'}
             onClick={() => this.forceUpdate()}
             style={{ marginLeft: 20, fontSize: 25 }}
           />
         </div>
         <div>
-          <div className={styles.rowCenter}>
+          <div className={'rowCenter'}>
             {this._renderImageBrowser()}
             {this._renderBrief()}
           </div>
@@ -123,7 +124,7 @@ class LabelImages extends React.Component {
 
   _renderImageBrowser = () => {
     const { currentIndex } = this.state;
-    const image = this.presenter.getCurrentImage(currentIndex);
+    const image = this.presenter.getCurrentImage();
     return (
       <div style={{ flex: 1, maxWidth: 1000 }}>
         {image && (
@@ -138,7 +139,6 @@ class LabelImages extends React.Component {
     );
   };
   _renderLabels = () => {
-    const { options, selectedOptions, boundKeys } = this.state;
     return (
       <div style={{}}>
         <Labels ref={r => (this._labels = r)} />

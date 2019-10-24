@@ -1,8 +1,16 @@
-import React from 'react';
+import * as React from 'react';
 import { Button } from 'antd';
-import styles from '../labelImages.css';
-import Mousetrap from 'mousetrap';
-class ImageBrowser extends React.Component {
+import '../labelImages.css';
+import * as Mousetrap from 'mousetrap';
+import { IBaseImage } from '../../../models';
+
+interface IProps {
+  lastImage: () => void;
+  skipOne: () => void;
+  nextImage: () => void;
+  image: IBaseImage;
+}
+class ImageBrowser extends React.Component<IProps> {
   componentDidMount() {
     this._initKeyboardListener();
   }
@@ -21,7 +29,7 @@ class ImageBrowser extends React.Component {
     const { uri, extname, filename } = image;
     return (
       <div>
-        <div className={styles.rowCenter}>
+        <div className={'rowCenter'}>
           <h3>{'filename: ' + filename}</h3>
         </div>
         <img
@@ -30,12 +38,12 @@ class ImageBrowser extends React.Component {
           alt={'img'}
         />
         <div
-          className={styles.rowCenter}
+          className={'rowCenter'}
           style={{ justifyContent: 'space-between', width: '100%' }}
         >
-          <Button onClick={() => lastImage(image)}>{'⬅️ or ⬆️ Last'}</Button>
-          <Button onClick={() => skipOne(image)}>{'Skip space+space'}</Button>
-          <Button onClick={() => nextImage(image)}>{'Next ⬇️ or ➡️'}</Button>
+          <Button onClick={lastImage}>{'⬅️ or ⬆️ Last'}</Button>
+          <Button onClick={skipOne}>{'Skip space+space'}</Button>
+          <Button onClick={nextImage}>{'Next ⬇️ or ➡️'}</Button>
         </div>
       </div>
     );
