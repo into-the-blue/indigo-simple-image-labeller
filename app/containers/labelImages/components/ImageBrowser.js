@@ -7,7 +7,7 @@ class ImageBrowser extends React.Component {
     this._initKeyboardListener();
   }
   _initKeyboardListener = () => {
-    const { lastImage, skipOne, nextImage, image } = this.props;
+    const { lastImage, skipOne, nextImage } = this.props;
     Mousetrap.bind('left', lastImage);
     Mousetrap.bind('up', lastImage);
 
