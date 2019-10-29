@@ -1,7 +1,6 @@
-import { dialog, remote, BrowserWindow } from 'electron';
+import {} from 'electron';
 import { message } from 'antd';
 import fs from 'fs-extra';
-import Mousetrap from 'mousetrap';
 import Path from 'path';
 import Moment from 'moment';
 import { selectFile, safelyReadFile } from '../../utils';
@@ -24,6 +23,31 @@ function extractLabelsFromJson(data, delimiter) {
     flatten(data.map(({ labels }) => labels.split(delimiter)))
   );
 }
+
+function lookUpIndex(data, initialIndex, condition = null) {
+  if (!!data[initialIndex]) return initialIndex;
+  if (initialIndex < 0) return 0;
+  return lookUpIndex(data, initialIndex - 1);
+}
+
+async function selectAndReadFile() {
+  const filePaths = await selectFile('openFile');
+  if (!filePaths[0]) throw new Error('No file selected');
+  return safelyReadFile(filePaths[0]);
+}
+
+function isValidLabels(labels) {
+  if (!Array.isArray(labels)) return false;
+  return labels.every(la => {
+    return (
+      ['checkbox', 'radio'].includes(la.type) &&
+      Array.isArray(la.options) &&
+      la.options.every(
+        o => typeof o.value === 'string' && typeof o.annotation === 'string'
+      )
+    );
+  });
+}
 class Presenter {
   fileNames = [];
   startTime = Moment().format('YYYY-MM-DD');
@@ -31,7 +55,7 @@ class Presenter {
   savingPath;
   fileSavingName = 'labeled-' + this.startTime;
   skippedFileSavingName = 'skipped-' + this.startTime;
-  skippedImages = [];
+  skippedFileNames = [];
   fileSaingExt = '.json';
   delimiter = ';';
   labeledImages = [];
@@ -197,8 +221,8 @@ class Presenter {
   };
 
   get isReviewMode() {
-    const { store, setStore } = this.getStore();
-    const { currentIndex, mode } = store;
+    const { store } = this.getStore();
+    const { mode } = store;
     const isReviewMode = mode === 'review';
     return isReviewMode;
   }
@@ -209,15 +233,20 @@ class Presenter {
    * @memberof Presenter
    * get last image
    */
-  retrieveLastImage = async () => {
+  _retrieveLastImage = async () => {
     const { store, setStore } = this.getStore();
-    const { currentIndex, mode } = store;
+    const { currentIndex } = store;
     const hide = message.loading();
+    //  mark
+    // saved file path
+    // index
+    // save[-1] === all[currentIndex - 1]
+    // const savedFilePath =
     try {
       if (!(await fs.exists(this.savedFilePath))) {
         return message.error('File not exists!');
       }
-      let data = await fs.readFile(this.savedFilePath, 'utf8');
+      let data = await safelyReadFile(this.savedFilePath);
       if (!data) {
         return message.error('No data found in the file');
       }
@@ -225,7 +254,7 @@ class Presenter {
       if (!Array.isArray(data)) {
         return message.error('Data is not type of array');
       }
-      const last = data[data.length - 1];
+      const last = data.slice(-1)[0];
       if (!last) {
         return message.error('Last element not exists');
       }
@@ -242,11 +271,20 @@ class Presenter {
         console.error(savedLastFilename, last.filename);
       } else {
         if (!this.isReviewMode) {
+          // remove last image from labeled list
           this.labeledImages.pop();
         }
-        // todo last image display skipped one
+        let nextIndex;
+        if (this.isReviewMode) {
+          // if review, next index equal to current index minus 1
+          nextIndex = currentIndex - 1;
+        } else {
+          nextIndex = this.fileNames.indexOf(last.filename);
+          console.log('index in filenames', nextIndex);
+          // look up index  until file name is not skipped
+        }
         setStore({
-          currentIndex: currentIndex - 1
+          currentIndex: nextIndex
         });
         this.setSelectedLabels(last.labels);
         if (!this.isReviewMode) {
@@ -274,7 +312,17 @@ class Presenter {
     const { store, setStore } = this.getStore();
     const { currentIndex } = store;
     if (currentIndex === 0) return message.error('No last image');
-    await this.retrieveLastImage();
+    await this._retrieveLastImage();
+  };
+
+  _writeSkippedFile = () => {
+    fs.writeFile(
+      this.skippedFilePath,
+      JSON.stringify(this.skippedFileNames),
+      'utf8'
+    ).catch(err => {
+      message.error('Failed to save skipped filenames');
+    });
   };
 
   /**
@@ -282,7 +330,7 @@ class Presenter {
    *
    * @memberof Presenter
    * skip one image
-   * if review delete 
+   * if review delete
    */
   skipOne = async () => {
     const { uri, extname, filename } = this.getCurrentImage();
@@ -292,26 +340,23 @@ class Presenter {
       ? this.labeledImages.length - 1
       : this.fileNames.length - 1;
     if (currentIndex < maxIndex) {
-      setStore({
-        currentIndex: currentIndex + 1
-      });
       message.info('Skipped');
-      if (!this.skippedImages.includes(filename)) {
-        this.skippedImages.push(filename);
-        await fs
-          .writeFile(
-            this.skippedFilePath,
-            JSON.stringify(this.skippedImages),
-            'utf8'
-          )
-          .catch(err => {
-            message.error('Failed to save skipped filenames');
-          });
+      const nextIndex = currentIndex;
+      if (!this.skippedFileNames.includes(filename)) {
+        this.skippedFileNames.push(filename);
+        this._writeSkippedFile();
       }
       if (this.isReviewMode) {
-        this.labeledImages.filter((_, idx) => idx !== currentIndex);
+        this.labeledImages = this.labeledImages.filter(
+          ({ filename: filename2 }) => filename2 !== filename
+        );
         await this.writeFile();
+      } else {
+        this.filenames = this.fileNames.filter(o => o !== filename);
       }
+      setStore({
+        currentIndex: nextIndex
+      });
     } else {
       message.error('This is the last image !');
     }
@@ -409,6 +454,64 @@ class Presenter {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  loadSkippedFiles = async () => {
+    try {
+      const filePaths = await selectFile('openFile');
+      if (filePaths[0]) {
+        const { filename } = this.getCurrentImage();
+        const { currentIndex } = this.getStore().store;
+        const data = await safelyReadFile(filePaths[0]);
+        if (Array.isArray(data)) {
+          this.skippedFileNames = [
+            new Set([...data, ...this.skippedFileNames])
+          ];
+          let nextIndex = -1;
+          if (this.isReviewMode) {
+            this.labeledImages = this.labeledImages.filter(
+              o => !this.skippedFileNames.includes(o.filename)
+            );
+            nextIndex = this.labeledImages.findIndex(
+              o => o.filename === filename
+            );
+            if (nextIndex === -1) {
+              // use currentIndex
+              nextIndex = lookUpIndex(this.labeledImages, currentIndex);
+            }
+          } else {
+            this.fileNames = this.fileNames.filter(
+              o => !this.skippedFileNames.includes(o)
+            );
+            nextIndex = this.fileNames.indexOf(filename);
+            if (nextIndex === -1) {
+              nextIndex = lookUpIndex(this.filenames, currentIndex);
+            }
+          }
+
+          if (nextIndex !== currentIndex) {
+            this.getStore().setStore({
+              currentIndex: nextIndex
+            });
+          }
+        }
+      }
+    } catch (err) {
+      message.error('Failed to load skipped files');
+    }
+  };
+
+  loadLabels = async () => {
+    try {
+      const data = await selectAndReadFile();
+      if (isValidLabels(data)) {
+        this.viewModel.setLabelObjs(data);
+      } else {
+        message.error('Invalid labels');
+      }
+    } catch (err) {
+      message.error('Failed to load labels');
     }
   };
 }

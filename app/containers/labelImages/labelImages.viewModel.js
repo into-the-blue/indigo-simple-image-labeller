@@ -43,6 +43,11 @@ class LabelImages extends React.Component {
   };
   setSelectedLabels = labels =>
     this._labels && this._labels.setSelectedLabels(labels);
+
+  setLabelObjs = labelObjs => {
+    this._labels && this._labels.setLabelObjs(labelObjs);
+    this.forceUpdate();
+  };
   render() {
     return (
       <div
@@ -57,6 +62,18 @@ class LabelImages extends React.Component {
             style={{ marginLeft: 20 }}
           >
             {'restore form local'}
+          </Button>
+          <Button
+            onClick={this.presenter.loadSkippedFiles}
+            style={{ marginLeft: 20 }}
+          >
+            {'load skipped files'}
+          </Button>
+          <Button
+            onClick={this.presenter.loadLabels}
+            style={{ marginLeft: 20 }}
+          >
+            {'load labels'}
           </Button>
           <Button
             onClick={this.presenter.reviewFile}

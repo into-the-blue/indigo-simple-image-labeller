@@ -11,7 +11,7 @@ export const selectFile = type => {
         properties: [type]
       },
       filePaths => {
-        if (!filePaths) return reject('no file selected');
+        if (!filePaths) return reject(new Error('no file selected'));
         return resolve(filePaths);
       }
     );

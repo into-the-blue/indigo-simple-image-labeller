@@ -59,6 +59,8 @@
     "no-plusplus": "off",
     "eqeqeq": "off",
     "jsx-a11y/alt-text": "warn",
+    "no-extra-boolean-cast": "off",
+    "no-param-reassign": "off",
     "prefer-destructuring": [
       "off",
       {

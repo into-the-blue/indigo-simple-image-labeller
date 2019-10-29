@@ -4,6 +4,7 @@ import { Col, Input, Button, message, Modal } from 'antd';
 import styles from '../labelImages.css';
 import { InputLabel } from './index';
 import { flatten } from 'lodash';
+import * as Mousetrap from 'mousetrap';
 
 // {
 //   options: [
@@ -143,7 +144,7 @@ class Labels extends React.Component {
   get getAllLabels() {
     return [
       ...new Set(
-        flatten(this.state.labelObjs.map(o => o.options.map(o => o.value)))
+        flatten(this.state.labelObjs.map(o => o.options.map(o2 => o2.value)))
       )
     ];
   }
@@ -156,6 +157,12 @@ class Labels extends React.Component {
   setSelectedLabels = labels => {
     this.setState({
       selectedValues: labels
+    });
+  };
+
+  setLabelObjs = labelObjs => {
+    this.setState({
+      labelObjs
     });
   };
   render() {
