@@ -457,6 +457,12 @@ class Presenter {
     }
   };
 
+  /**
+   *
+   *
+   * @memberof Presenter
+   * load skipped files
+   */
   loadSkippedFiles = async () => {
     try {
       const filePaths = await selectFile('openFile');
@@ -502,6 +508,12 @@ class Presenter {
     }
   };
 
+  /**
+   *
+   *
+   * @memberof Presenter
+   * load labels from local
+   */
   loadLabels = async () => {
     try {
       const data = await selectAndReadFile();
@@ -513,6 +525,27 @@ class Presenter {
     } catch (err) {
       message.error('Failed to load labels');
     }
+  };
+
+  /**
+   *
+   *
+   * @memberof Presenter
+   * save labels to local
+   */
+  onPressSaveLabels = async labelObjs => {
+    if (labelObjs.length === 0) return message.warn('No labels to save');
+    if(!this.savingPath) return message.warn('Please select a working dir')
+    fs.writeFile(
+      this.savingPath + 'labels-' + this.startTime + '.json',
+      JSON.stringify(labelObjs),
+      'utf8'
+    )
+      .then(() => message.success('success'))
+      .catch(err => {
+        console.error(err);
+        message.error('save label error');
+      });
   };
 }
 

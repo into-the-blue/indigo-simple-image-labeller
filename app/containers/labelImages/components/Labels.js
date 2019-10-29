@@ -167,9 +167,16 @@ class Labels extends React.Component {
   };
   render() {
     const { labelObjs, selectedValues, boundKeys } = this.state;
+    const { onPressSaveLabels } = this.props;
     return (
       <Col>
-        <Button onClick={this._createLabelObj('checkbox')}>
+        <Button onClick={() => onPressSaveLabels(labelObjs)} type={'primary'}>
+          {'Save labels'}
+        </Button>
+        <Button
+          onClick={this._createLabelObj('checkbox')}
+          style={{ marginLeft: 15 }}
+        >
           {'Create checkbox'}
         </Button>
         <Button

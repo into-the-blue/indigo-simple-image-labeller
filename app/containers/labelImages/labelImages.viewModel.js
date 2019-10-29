@@ -108,7 +108,11 @@ class LabelImages extends React.Component {
             onOk={this.presenter.nextImage}
           >
             {this.getSelectedLabels.map((label, index) => {
-              return <p style={{ color: 'blue' }}>{label}</p>;
+              return (
+                <p key={'lbl' + index} style={{ color: 'blue' }}>
+                  {label}
+                </p>
+              );
             })}
           </Modal>
         )}
@@ -154,10 +158,12 @@ class LabelImages extends React.Component {
     );
   };
   _renderLabels = () => {
-    const { options, selectedOptions, boundKeys } = this.state;
     return (
       <div style={{}}>
-        <Labels ref={r => (this._labels = r)} />
+        <Labels
+          ref={r => (this._labels = r)}
+          onPressSaveLabels={this.presenter.onPressSaveLabels}
+        />
       </div>
     );
   };
