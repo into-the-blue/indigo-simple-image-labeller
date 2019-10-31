@@ -24,3 +24,6 @@ export const safelyReadFile = async (pth, returnType = 'JSON') => {
   if (returnType === 'JSON') return JSON.parse(data);
   return data;
 };
+
+export const sleep = async (time = 0) =>
+  new Promise(resolve => setTimeout(resolve, time));

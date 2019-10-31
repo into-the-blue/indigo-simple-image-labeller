@@ -3,7 +3,7 @@ import { message } from 'antd';
 import fs from 'fs-extra';
 import Path from 'path';
 import Moment from 'moment';
-import { selectFile, safelyReadFile } from '../../utils';
+import { selectFile, safelyReadFile, sleep } from '../../utils';
 import { flatten } from 'lodash';
 const IMAGE_EXT = /\.(bmp|jpg|jpeg|png|tif|gif|pcx|tga|exif|fpx|svg|psd|cdr|pcd|dxf|ufo|eps|ai|raw|wmf|webp)+$/;
 function verifyImages(filenames) {
@@ -52,7 +52,7 @@ class Presenter {
   fileNames = [];
   startTime = Moment().format('YYYY-MM-DD');
   activePath;
-  savingPath;
+  activeDir;
   fileSavingName = 'labeled-' + this.startTime;
   skippedFileSavingName = 'skipped-' + this.startTime;
   skippedFileNames = [];
@@ -78,14 +78,33 @@ class Presenter {
     }
   };
   get savedFilePath() {
-    return Path.join(this.savingPath, this.fileSavingName + this.fileSaingExt);
+    return Path.join(
+      this.activeDir,
+      'labeled',
+      this.fileSavingName + this.fileSaingExt
+    );
   }
   get skippedFilePath() {
     return Path.join(
-      this.savingPath,
+      this.activeDir,
+      'skipped',
       this.skippedFileSavingName + this.fileSaingExt
     );
   }
+
+  /**
+   *
+   *
+   * @memberof Presenter
+   * labeled
+   * skipped
+   * labels
+   */
+  initDirectory = async dirName => {
+    if (!(await fs.exists(Path.join(this.activeDir, dirName)))) {
+      await fs.mkdir(Path.join(this.activeDir, dirName));
+    }
+  };
 
   /**
    *
@@ -132,11 +151,10 @@ class Presenter {
     try {
       const hide = message.loading('Reading files');
       this.activePath = path;
-      this.savingPath = Path.join(path, '../');
+      this.activeDir = Path.join(path, '../');
       const filenames = await fs.readdir(path);
       this.fileNames = verifyImages(filenames);
       this.getStore().setStore({
-        imageCount: filenames.length,
         activeDir: path
       });
       hide();
@@ -205,10 +223,11 @@ class Presenter {
   writeFile = async () => {
     if (!this.labeledImages.length) return;
     try {
-      // const exist = await fs.exists(this.savedFilePath);
-      // if (exist) {
-      // } else {
-      // }
+      const exist = await fs.exists(this.savedFilePath);
+      if (exist) {
+      } else {
+      }
+      await this.initDirectory('labeled');
       await fs.writeFile(
         this.savedFilePath,
         JSON.stringify(this.labeledImages),
@@ -315,7 +334,8 @@ class Presenter {
     await this._retrieveLastImage();
   };
 
-  _writeSkippedFile = () => {
+  _writeSkippedFile = async () => {
+    await this.initDirectory('skipped');
     fs.writeFile(
       this.skippedFilePath,
       JSON.stringify(this.skippedFileNames),
@@ -334,11 +354,12 @@ class Presenter {
    */
   skipOne = async () => {
     const { uri, extname, filename } = this.getCurrentImage();
-    const { store, setStore, mode } = this.getStore();
+    const { store, setStore } = this.getStore();
     const { currentIndex } = store;
     const maxIndex = this.isReviewMode
       ? this.labeledImages.length - 1
       : this.fileNames.length - 1;
+    console.log(currentIndex, maxIndex);
     if (currentIndex < maxIndex) {
       message.info('Skipped');
       const nextIndex = currentIndex;
@@ -352,7 +373,9 @@ class Presenter {
         );
         await this.writeFile();
       } else {
-        this.filenames = this.fileNames.filter(o => o !== filename);
+        this.fileNames = this.fileNames.filter((o, idx) => {
+          return o.trim() != filename.trim();
+        });
       }
       setStore({
         currentIndex: nextIndex
@@ -492,7 +515,7 @@ class Presenter {
             );
             nextIndex = this.fileNames.indexOf(filename);
             if (nextIndex === -1) {
-              nextIndex = lookUpIndex(this.filenames, currentIndex);
+              nextIndex = lookUpIndex(this.fileNames, currentIndex);
             }
           }
 
@@ -535,9 +558,10 @@ class Presenter {
    */
   onPressSaveLabels = async labelObjs => {
     if (labelObjs.length === 0) return message.warn('No labels to save');
-    if(!this.savingPath) return message.warn('Please select a working dir')
+    if (!this.activeDir) return message.warn('Please select a working dir');
+    await this.initDirectory('labels');
     fs.writeFile(
-      this.savingPath + 'labels-' + this.startTime + '.json',
+      this.activeDir + 'labels-' + this.startTime + '.json',
       JSON.stringify(labelObjs),
       'utf8'
     )

@@ -11,7 +11,6 @@ class LabelImages extends React.Component {
     super(props);
     this.state = {
       currentIndex: 0,
-      imageCount: 0,
       activeDir: '',
       modalVisible: false,
       mode: 'standard',
@@ -120,12 +119,17 @@ class LabelImages extends React.Component {
     );
   }
   _renderBrief = () => {
-    const { activeDir, imageCount, currentIndex } = this.state;
+    const { activeDir, currentIndex } = this.state;
     const unassignedLabels = this.presenter.unassignedLabels;
     return (
       <div style={{ marginLeft: 20 }}>
         <h4>{'Active Dir: ' + activeDir}</h4>
-        <h4>{'Info: ' + (currentIndex + 1) + '/' + imageCount}</h4>
+        <h4>
+          {'Info: ' +
+            (currentIndex + 1) +
+            '/' +
+            this.presenter.fileNames.length}
+        </h4>
         <h4>{'Labeled: ' + this.presenter.labeledImages.length}</h4>
         <h4>{'Json: ' + this.presenter.fileSavingName}</h4>
         <h4>{'Delimiter: ' + this.presenter.delimiter}</h4>
